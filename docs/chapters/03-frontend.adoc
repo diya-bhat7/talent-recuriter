@@ -1,0 +1,34 @@
+== Frontend Deep Dive
+
+The frontend is the "soul" of the platform, providing the interactive experience that users love.
+
+=== Routing and Pages
+
+The application uses `react-router-dom` for navigation. The main routes defined in `App.tsx` include:
+
+*   **Dashboard**: The primary landing page after login, showing a summary of recruitment activity.
+*   **Candidates List**: A detailed view of all applicants with filtering and search capabilities.
+*   **Candidate Profile**: A deep-dive into a specific candidate's history, scores, and documents.
+*   **Position Management**: CRUD operations for job positions.
+*   **Auth Pages**: Login, Registration, and Password Reset.
+
+=== Component Philosophy
+
+We follow an "Atomic-ish" component design:
+- **Base Components** (`src/components/ui`): Highly reusable, low-level components (Buttons, Inputs, Modals).
+- **Composite Components**: Higher-level components that combine base components to perform specific tasks (e.g., `SubmissionForm`, `CandidateCard`).
+- **Layout Components**: Manage the overall "shell" of the application (`Navbar`, `Sidebar`).
+
+=== State and Data Management
+
+The application avoids complex global state (like Redux) in favor of:
+*   **Server State**: Managed by **TanStack Query**. This handles fetching, caching, and synchronizing data with Supabase.
+*   **Local UI State**: Managed by standard React `useState` and `useReducer`.
+*   **Forms State**: Managed by **React Hook Form**, which provides excellent performance and validation hooks.
+
+=== Styling and Theming
+
+The platform features a premium theme:
+- **Glassmorphism**: Achieved using backdrop-blur and semi-transparent gradients.
+- **Tailwind Config**: Custom color palettes and spacing definitions in `tailwind.config.ts`.
+- **Dark Mode**: Fully supported using `next-themes`, ensuring eye comfort for all users.

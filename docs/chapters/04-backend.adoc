@@ -1,0 +1,48 @@
+== Backend Deep Dive
+
+The backend is built on Supabase, leveraging the full power of PostgreSQL.
+
+=== Database Schema
+
+The schema is designed for a multi-tenant recruitment environment. Key tables include:
+
+==== `candidates`
+Stores all information about an applicant.
+- `id`: UUID (Primary Key).
+- `name`: Candidate's full name.
+- `email`: Contact email.
+- `status`: Current stage (New, Interviewing, Offered, etc.).
+- `resume_url`: Link to the stored resume.
+
+==== `positions`
+Job openings that candidates apply for.
+- `title`: Job title.
+- `department`: Hiring department.
+- `closed`: Boolean status.
+
+==== `scorecards`
+Detailed interview evaluations.
+- `candidate_id`: Foreign key to `candidates`.
+- `interviewer_id`: Foreign key to `profiles`.
+- `rating`: Numerical score.
+- `comments`: Qualitative feedback.
+
+=== Row Level Security (RLS)
+
+Security is not just in the code; it's in the data. Every table has RLS enabled.
+Policies ensure that:
+- Users can only see data belonging to their company.
+- Administrators can manage all company data.
+- Public users (like applicants) can only submit new forms.
+
+=== Edge Functions
+
+Located in `supabase/functions`, these TypeScript functions handle server-side logic:
+*   **Airtable Sync**: Listen for new database entries and push them to Airtable.
+*   **Email Notifications**: Send transactional emails via SMTP or SendGrid.
+*   **PDF Generation**: Dynamically create candidate summaries.
+
+=== Integrations
+
+- **Airtable**: Used as a secondary database or for business automation.
+- **Storage**: Supabase Storage buckets are used to host candidate resumes and profile pictures.

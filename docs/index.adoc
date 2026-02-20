@@ -1,0 +1,30 @@
+= Contact Form & Recruitment Platform: The Complete Manual
+:author: Antigravity AI
+:revnumber: 1.0
+:revdate: {localdate}
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectanchors:
+:source-highlighter: highlight.js
+:icons: font
+:description: Comprehensive documentation for the Contact Form and Recruitment Platform.
+
+include::chapters/01-introduction.adoc[]
+
+include::chapters/02-architecture.adoc[]
+
+include::chapters/03-frontend.adoc[]
+
+include::chapters/04-backend.adoc[]
+
+include::chapters/05-features.adoc[]
+
+include::chapters/06-development.adoc[]
+
+[appendix]
+== Appendix: Glossary
+
+* **ATS**: Applicant Tracking System.
+* **RLS**: Row Level Security (PostgreSQL).
+* **SPA**: Single Page Application.

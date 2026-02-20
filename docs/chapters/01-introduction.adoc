@@ -1,0 +1,24 @@
+== Introduction
+
+Welcome to the official manual for the **Contact Form & Recruitment Platform**. This document is designed to provide you with an in-depth understanding of the platform, whether you are a developer looking to extend its functionality, an administrator managing the system, or a stakeholder interested in its capabilities.
+
+=== Purpose
+
+The platform was conceived as a high-performance, aesthetically pleasing solution for modern recruitment needs. It simplifies the process of collecting candidate information, tracking their progress through the hiring funnel, and collaborating on hiring decisions.
+
+=== Key Highlights
+
+* **Modern Design**: A "glassmorphism" based UI that offers a premium and focus-oriented experience.
+* **Rapid Deployment**: Built with technologies that allow for swift iteration and deployment.
+* **Extensibility**: A modular codebase that can be easily customized for different industries or recruitment workflows.
+* **Data Integrity**: Powered by PostgreSQL to ensure robust data management.
+
+=== How to Use This Book
+
+This manual is structured to take you from a high-level overview to the granular technical details:
+
+1. **Architecture**: Core technology and system design.
+2. **Frontend Deep Dive**: UI structure, components, and state.
+3. **Backend Deep Dive**: Database, security, and serverless logic.
+4. **Feature Guide**: Detailed walkthrough of user-facing features.
+5. **Development**: Technical guide for local setup and maintenance.

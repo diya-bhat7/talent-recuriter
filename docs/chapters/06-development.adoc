@@ -1,0 +1,51 @@
+== Development Guide
+
+This chapter provides the technical foundation for maintaining and extending the platform.
+
+=== Environment Setup
+
+==== Prerequisites
+- **Node.js**: v18.0.0 or higher.
+- **npm** or **bun**: For package management.
+- **Supabase CLI**: Recommended for local database development.
+
+==== Step-by-Step Installation
+1.  **Clone**: `git clone <api-url>`
+2.  **Install**: `npm install`
+3.  **Env**: Copy `.env.example` to `.env` and fill in credentials.
+4.  **Run**: `npm run dev`
+
+=== Backend Development (Supabase)
+
+To modify the database schema:
+1.  Edit files in `supabase/migrations`.
+2.  Use the Supabase CLI to push changes: `supabase db push`.
+3.  Regenerate TypeScript types: `npx supabase gen types typescript --local > src/types/supabase.ts`.
+
+=== Testing and Quality
+
+We maintain high standards through:
+*   **Vitest**: Our primary testing framework for unit and integration tests.
+    - Run all tests: `npm run test`
+    - Watch mode: `npm run test:watch`
+*   **ESLint**: Enforces code style and best practices.
+    - Run linter: `npm run lint`
+
+=== Build and Deployment
+
+==== Production Build
+Run the following command to generate a production bundle:
+[source,bash]
+----
+npm run build
+----
+This command triggers the Vite build process, which:
+1.  Type-checks the TypeScript code.
+2.  Optimizes and minifies the JavaScript/CSS.
+3.  Generates a static `dist/` folder.
+
+==== Hosting
+The platform is compatible with any modern static hosting provider.
+- **Vercel**: Simply connect your repository.
+- **Netlify**: Use the `dist` folder as the publish directory.
+- **Manual**: Upload the contents of `dist/` to any web server.

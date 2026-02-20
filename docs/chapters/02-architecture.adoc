@@ -1,0 +1,44 @@
+== Architecture
+
+Understanding the architecture of the Contact Form & Recruitment Platform is crucial for effective maintenance and scaling. The system is built on a modern, event-driven, and serverless-first philosophy.
+
+=== Technology Stack
+
+The platform's excellence is driven by its carefully selected tech stack:
+
+*   **React (v18)**: The core library for building the user interface.
+*   **TypeScript**: Provides static typing to ensure code reliability and developer productivity.
+*   **Vite**: A lightning-fast build tool that powers the development environment.
+*   **Tailwind CSS**: A utility-first CSS framework for rapid UI development.
+*   **shadcn/ui**: A collection of high-quality, accessible UI components.
+*   **Supabase**: An open-source Firebase alternative that handles our Database (PostgreSQL), Auth, and Edge Functions.
+
+=== System Design
+
+The application follows a standard Single-Page Application (SPA) model.
+
+==== Frontend Architecture
+
+The React application is organized into logical directories:
+- `src/pages`: Top-level route components.
+- `src/components`: Reusable UI elements and feature-specific components.
+- `src/hooks`: Custom hooks for state and data orchestration.
+- `src/services`: Abstraction layer for interacting with external APIs (Supabase).
+
+==== Backend Architecture
+
+The backend is largely managed by Supabase, reducing the need for traditional server maintenance.
+- **PostgreSQL**: The relational database where all structured data resides.
+- **Auth**: handles user registration, sessions, and security.
+- **Edge Functions**: Used for background tasks like syncing data to Airtable.
+- **RLS (Row Level Security)**: Policies defined at the database level ensure that data access is secure and partitioned per user or company.
+
+=== Data Flow
+
+When a user interacts with the app (e.g., submitting a form):
+1. The **Frontend** validates the input using Zod.
+2. The **Frontend** calls the Supabase service.
+3. **Supabase Auth** verifies the user's session.
+4. The **PostgreSQL** engine checks **RLS Policies**.
+5. The data is persisted.
+6. A **Supabase Edge Function** may be triggered to sync the data to an external service like Airtable.

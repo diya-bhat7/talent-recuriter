@@ -1,0 +1,37 @@
+== Feature Guide
+
+The Contact Form & Recruitment Platform is packed with features designed to make hiring efficient and collaborative.
+
+=== 1. Smart Candidate Capture
+
+The platform includes a customizable `SubmissionForm` that can be embedded or shared.
+- **Dynamic Validation**: Fields are validated in real-time.
+- **File Uploads**: Supports resume uploads directly to Supabase Storage.
+- **Instant Feedback**: Users receive immediate confirmation upon successful submission.
+
+=== 2. Centralized Dashboard
+
+The Dashboard provides a bird's-eye view of your recruitment health.
+- **Position Cards**: See active openings and the number of candidates for each.
+- **Analytics**: High-level metrics on candidate flow.
+- **Activity Feed**: Stay updated with the latest comments, status changes, and new applications.
+
+=== 3. Advanced Candidate Management
+
+Manage the entire lifecycle of a candidate from one interface.
+- **Kanban Flow**: Move candidates between stages with ease.
+- **Unified Timeline**: View all comments, scorecards, and activities in a single, chronologically sorted feed.
+- **Document Viewer**: View resumes and other attachments directly in the browser.
+
+=== 4. Collaborative Evaluation
+
+Hiring is a team sport.
+- **Scorecards**: Structured rating systems to evaluate candidates consistently.
+- **Comments**: Threaded discussions on candidate profiles.
+- **Voice Notes**: Capture nuanced feedback that text can't convey.
+
+=== 5. Automated Data Sync
+
+Save time and reduce data entry errors.
+- **Airtable Sync**: Automatically push new submissions to your company's Airtable.
+- **Extensible**: The sync engine can be easily adapted for Google Sheets, Slack, or other CRM systems.
