@@ -32,6 +32,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useCandidates } from '@/hooks/useCandidates';
 
+const sanitizeUrl = (url: string) => {
+    if (!url) return null;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    return `https://${trimmed}`;
+};
+
 interface InterviewSchedulerProps {
     candidateId: string;
     candidateName: string;
@@ -125,7 +132,7 @@ export function InterviewScheduler({ candidateId, candidateName, positionId, onS
                     interview_type: type,
                     scheduled_at: scheduledAt.toISOString(),
                     duration_minutes: duration,
-                    meeting_link: link || null,
+                    meeting_link: sanitizeUrl(link),
                     status: 'scheduled',
                 } as any,
                 candidateIds: [candidateId, ...extraCandidateIds],
@@ -368,11 +375,14 @@ export function InterviewScheduler({ candidateId, candidateName, positionId, onS
                     <LinkIcon className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                     <Input
                         placeholder="https://meet.google.com/..."
-                        className="pl-9 h-9 rounded-lg text-sm"
+                        className="pl-9 h-9 rounded-lg text-sm border-primary/20 focus-visible:ring-primary"
                         value={link}
                         onChange={(e) => setLink(e.target.value)}
                     />
                 </div>
+                <p className="text-[10px] text-muted-foreground italic px-1">
+                    Meeting link will be included in the automated invitation email.
+                </p>
             </div>
 
             {guides && guides.length > 0 && (
@@ -423,13 +433,19 @@ export function InterviewScheduler({ candidateId, candidateName, positionId, onS
                 </a>
             </div>
 
-            <Button
-                className="w-full h-11 text-md font-bold rounded-xl shadow-lg hover:shadow-xl transition-all bg-primary"
-                onClick={handleSubmit}
-                disabled={scheduleInterview.isPending}
-            >
-                {scheduleInterview.isPending ? "Scheduling..." : "Confirm & Schedule"}
-            </Button>
+            <div className="space-y-3">
+                <Button
+                    className="w-full h-11 text-md font-bold rounded-xl shadow-lg hover:shadow-xl transition-all bg-primary"
+                    onClick={handleSubmit}
+                    disabled={scheduleInterview.isPending}
+                >
+                    {scheduleInterview.isPending ? "Scheduling..." : "Confirm & Schedule"}
+                </Button>
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-emerald-600 font-bold uppercase tracking-wider">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Official invitations will be sent automatically
+                </div>
+            </div>
         </div>
     );
 }

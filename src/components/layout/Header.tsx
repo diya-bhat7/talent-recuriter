@@ -14,8 +14,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Building2, LogOut, User, RefreshCw } from 'lucide-react';
+import { Building2, LogOut, User, RefreshCw, Layers } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { RoleSwitcher } from '@/components/admin/RoleSwitcher';
 import { getOptimizedImageUrl } from '@/lib/images';
 
 export const Header = memo(function Header() {
@@ -127,6 +128,11 @@ export const Header = memo(function Header() {
                                         </div>
                                         <span className="text-xs text-muted-foreground">{company.contact_email}</span>
                                     </div>
+                                </div>
+                                <DropdownMenuSeparator />
+                                <div className="px-2 py-1.5">
+                                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Role Management</p>
+                                    <RoleSwitcher />
                                 </div>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleNavigateProfile} className="cursor-pointer">

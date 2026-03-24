@@ -50,24 +50,73 @@ export function useScheduleInterview() {
                 if (error) console.error('Failed to update candidate status:', error);
             }
 
-            // 2. Log activity for each candidate
+            // 2. Log activity and send email invites
             if (user && company) {
                 const candidateNames: string[] = [];
-                for (const cid of candidateIds) {
-                    // Get candidate name for logging (optional, could be passed or fetched)
-                    const { data: c } = await supabase.from('candidates').select('name').eq('id', cid).single();
+                const candidateEmails: string[] = [];
+
+                // Fetch candidate details
+                const { data: candidates } = await supabase
+                    .from('candidates')
+                    .select('name, email')
+                    .in('id', candidateIds);
+
+                candidates?.forEach(c => {
+                    candidateNames.push(c.name);
+                    candidateEmails.push(c.email);
                     logInterviewScheduled(
                         company.id,
                         user.id,
                         user.user_metadata?.full_name || user.email || 'User',
-                        cid,
-                        c?.name || 'Candidate',
+                        candidateIds[0], // Simplified log entry
+                        c.name || 'Candidate',
                         interview.interview_type || 'General'
                     );
-                    candidateNames.push(c?.name || 'Candidate');
+                });
+
+                // Fetch interviewer emails
+                const { data: interviewers } = await supabase
+                    .from('profiles')
+                    .select('email')
+                    .in('id', interviewerIds);
+
+                const interviewerEmails = interviewers?.map(i => i.email).filter(Boolean) || [];
+
+                // Fetch position name
+                const { data: position } = await supabase
+                    .from('positions')
+                    .select('position_name')
+                    .eq('id', interview.position_id)
+                    .single();
+
+                const { data: { session } } = await supabase.auth.getSession();
+
+                // Updated: Call send-interview-invite instead of invite-candidate
+                // Updated: Use standard Supabase function invocation
+                const { data: invokeData, error: invokeError } = await supabase.functions.invoke('send-interview-invite', {
+                    body: {
+                        candidateEmail: candidateEmails[0],
+                        candidateName: candidateNames[0],
+                        interviewerEmails: interviewerEmails,
+                        scheduledAt: interview.scheduled_at,
+                        duration: interview.duration_minutes || 30,
+                        meetingLink: interview.meeting_link,
+                        interviewType: interview.interview_type || 'General',
+                        positionName: position?.position_name || 'Position',
+                        companyName: company.company_name
+                    }
+                });
+
+                if (invokeError) {
+                    console.error('INVOKE FULL ERROR:', JSON.stringify(invokeError, null, 2));
+                    // Try to extract a meaningful message from the error
+                    const message = (invokeError as any).context?.message || invokeError.message || 'Failed to send invite';
+                    toast.error(`Email Error: ${message}`);
+                } else {
+                    console.log('INVOKE SUCCESS: Email request sent', invokeData);
                 }
 
-                // Notify team (fire-and-forget)
+                // Notify team (Local notification bell)
                 notifyInterviewScheduled({
                     companyId: company.id,
                     actorUserId: user.id,
@@ -146,6 +195,22 @@ export function useUpdateInterviewNotes() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['interviews'] });
             toast.success('Interview notes updated');
+        },
+    });
+}
+
+export function useDeleteInterview() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => interviewService.deleteInterview(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+            queryClient.invalidateQueries({ queryKey: ['candidates'] });
+            toast.success('Interview deleted successfully');
+        },
+        onError: (error: any) => {
+            toast.error(`Failed to delete interview: ${error.message}`);
         },
     });
 }

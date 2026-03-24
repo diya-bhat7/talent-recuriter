@@ -1,4 +1,4 @@
-import { useInterviews, useUpdateInterviewStatus } from '@/hooks/useInterviews';
+import { useInterviews, useUpdateInterviewStatus, useDeleteInterview } from '@/hooks/useInterviews';
 import { format } from 'date-fns';
 import { Calendar, Clock, Video, CheckCircle2, XCircle, AlertCircle, ExternalLink, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ interface InterviewListProps {
 export function InterviewList({ candidateId }: InterviewListProps) {
     const { data: interviews, isLoading } = useInterviews(candidateId);
     const updateStatus = useUpdateInterviewStatus(candidateId);
+    const deleteInterview = useDeleteInterview();
 
     if (isLoading) return <div className="space-y-3 animate-pulse">
         <div className="h-16 bg-slate-100 rounded-xl" />
@@ -71,7 +72,7 @@ export function InterviewList({ candidateId }: InterviewListProps) {
                                 </span>
                                 {interview.meeting_link && (
                                     <a
-                                        href={interview.meeting_link}
+                                        href={interview.meeting_link?.startsWith('http') ? interview.meeting_link : `https://${interview.meeting_link}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-1 text-primary font-bold hover:underline"
@@ -107,6 +108,17 @@ export function InterviewList({ candidateId }: InterviewListProps) {
                                 >
                                     <XCircle className="h-4 w-4" />
                                     <span className="font-semibold">Cancel Interview</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="rounded-lg gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50 font-bold"
+                                    onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete this interview record?')) {
+                                            deleteInterview.mutate(interview.id);
+                                        }
+                                    }}
+                                >
+                                    <AlertCircle className="h-4 w-4" />
+                                    <span>Delete Permanently</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

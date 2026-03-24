@@ -28,6 +28,8 @@ import { Label } from "@/components/ui/label";
 import { Users, UserPlus, Shield, Mail, Trash2, ArrowLeft, Loader2, Key } from 'lucide-react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { TeamRole } from '@/types/advanced-features';
+import { RolePermissionsManager } from '@/components/team/RolePermissionsManager';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function TeamManagement() {
     const navigate = useNavigate();
@@ -52,6 +54,21 @@ export default function TeamManagement() {
         email: '',
         role: 'coordinator' as TeamRole,
         password: ''
+    });
+
+    const { data: companyRoles = [], isLoading: isLoadingRoles } = useQuery({
+        queryKey: ['company-roles', company?.id],
+        queryFn: async () => {
+            if (!company?.id) return [];
+            const { data, error } = await (supabase
+                .from('company_roles' as any)
+                .select('*')
+                .eq('company_id', company.id)
+                .order('role_name', { ascending: true }) as any);
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!company?.id,
     });
 
     const { data: members = [], isLoading } = useQuery({
@@ -172,7 +189,7 @@ export default function TeamManagement() {
 
             toast({
                 title: 'Success',
-                description: 'Team member created successfully. They will receive an email if SMTP is configured.'
+                description: 'Team member added successfully. They will receive a welcome email shortly.'
             });
 
             // Send welcome notification to the new team member
@@ -294,9 +311,18 @@ export default function TeamManagement() {
                                                     <SelectValue placeholder="Select role" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="admin">Admin</SelectItem>
-                                                    <SelectItem value="recruiter">Recruiter</SelectItem>
-                                                    <SelectItem value="coordinator">Coordinator</SelectItem>
+                                                    {companyRoles.map((r: any) => (
+                                                        <SelectItem key={r.id} value={r.role_name} className="capitalize">
+                                                            {r.role_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                    {companyRoles.length === 0 && (
+                                                        <>
+                                                            <SelectItem value="admin">Admin</SelectItem>
+                                                            <SelectItem value="recruiter">Recruiter</SelectItem>
+                                                            <SelectItem value="coordinator">Coordinator</SelectItem>
+                                                        </>
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -395,9 +421,18 @@ export default function TeamManagement() {
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="admin">Admin</SelectItem>
-                                                        <SelectItem value="recruiter">Recruiter</SelectItem>
-                                                        <SelectItem value="coordinator">Coordinator</SelectItem>
+                                                        {companyRoles.map((r: any) => (
+                                                            <SelectItem key={r.id} value={r.role_name} className="capitalize">
+                                                                {r.role_name}
+                                                            </SelectItem>
+                                                        ))}
+                                                        {companyRoles.length === 0 && (
+                                                            <>
+                                                                <SelectItem value="admin">Admin</SelectItem>
+                                                                <SelectItem value="recruiter">Recruiter</SelectItem>
+                                                                <SelectItem value="coordinator">Coordinator</SelectItem>
+                                                            </>
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </TableCell>
@@ -475,6 +510,10 @@ export default function TeamManagement() {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {company?.id && (
+                        <RolePermissionsManager companyId={company.id} />
+                    )}
                 </div>
             </main>
 

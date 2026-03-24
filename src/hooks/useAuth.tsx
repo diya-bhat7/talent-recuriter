@@ -6,7 +6,7 @@ import { useSessionTimeout } from './useSessionTimeout';
 import { useQueryClient } from '@tanstack/react-query';
 import { companyKeys } from './useCompany';
 
-import { TeamRole, ROLE_PERMISSIONS } from '@/types/advanced-features';
+import { TeamRole, ROLE_PERMISSIONS, CompanyPermissions, PermissionKey } from '@/types/advanced-features';
 
 type Company = Tables<'companies'>;
 
@@ -18,6 +18,8 @@ interface AuthContextType {
     company: Company | null;
     companyId?: string;
     role: TeamRole | null;
+    originalRole: TeamRole | null;
+    impersonateRole: (role: TeamRole | null) => void;
     loading: boolean;
     isAdmin: boolean;
     canDo: (permission: keyof typeof ROLE_PERMISSIONS['admin']) => boolean;
@@ -36,26 +38,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [profile, setProfile] = useState<Tables<'profiles'> | null>(null);
     const [company, setCompany] = useState<Company | null>(null);
-    const [role, setRole] = useState<TeamRole | null>(null);
+    const [originalRole, setOriginalRole] = useState<TeamRole | null>(null);
+    const [impersonatedRole, setImpersonatedRole] = useState<TeamRole | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchProfile = useCallback(async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .maybeSingle();
+    const [permissions, setPermissions] = useState<CompanyPermissions | null>(null);
 
-            if (data) {
-                const profileData = data as any;
-                setProfile(profileData);
-                if (profileData.role) {
-                    setRole(profileData.role as TeamRole);
-                }
+    const fetchRolePermissions = useCallback(async (roleName: string, companyId: string) => {
+        try {
+            const { data, error } = await (supabase
+                .from('company_roles' as any)
+                .select('permissions')
+                .eq('company_id', companyId)
+                .eq('role_name', roleName)
+                .maybeSingle() as any);
+
+            if (data?.permissions) {
+                setPermissions(data.permissions as unknown as CompanyPermissions);
+            } else {
+                // Fallback to defaults if no custom role found
+                setPermissions(ROLE_PERMISSIONS[roleName] || ROLE_PERMISSIONS['coordinator']);
             }
         } catch (err) {
-            console.error('Error fetching profile:', err);
+            console.error('Error fetching role permissions:', err);
+            setPermissions(ROLE_PERMISSIONS['coordinator']);
         }
     }, []);
 
@@ -68,58 +74,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .eq('id', userId)
                 .maybeSingle() as any;
 
+            let resolvedRole: TeamRole = 'coordinator';
+
             if (profileData?.role) {
-                setRole(profileData.role as TeamRole);
-                return;
-            }
-
-            // Fallback to legacy team_members check if profile sync isn't ready
-            const { data, error } = await supabase
-                .from('team_members')
-                .select('role')
-                .eq('user_id', userId)
-                .eq('company_id', companyId)
-                .maybeSingle();
-
-            if (data) {
-                setRole(data.role as TeamRole);
+                resolvedRole = profileData.role;
             } else {
-                // If user is the company owner but not in team_members, treat as admin
-                const { data: compData } = await supabase
-                    .from('companies')
-                    .select('user_id')
-                    .eq('id', companyId)
+                // Fallback to legacy team_members check if profile sync isn't ready
+                const { data } = await supabase
+                    .from('team_members')
+                    .select('role')
+                    .eq('user_id', userId)
+                    .eq('company_id', companyId)
                     .maybeSingle();
 
-                if (compData && compData.user_id === userId) {
-                    setRole('admin');
+                if (data) {
+                    resolvedRole = data.role;
                 } else {
-                    setRole('coordinator');
+                    // If user is the company owner but not in team_members, treat as admin
+                    const { data: compData } = await supabase
+                        .from('companies')
+                        .select('user_id')
+                        .eq('id', companyId)
+                        .maybeSingle();
+
+                    if (compData && compData.user_id === userId) {
+                        resolvedRole = 'admin';
+                    }
                 }
             }
+
+            setOriginalRole(resolvedRole);
+            fetchRolePermissions(impersonatedRole || resolvedRole, companyId);
         } catch (err) {
             console.error('Error fetching role:', err);
-            setRole('coordinator');
+            setOriginalRole('coordinator');
+            fetchRolePermissions('coordinator', companyId);
         }
-    }, []);
+    }, [impersonatedRole, fetchRolePermissions]);
 
     const fetchCompany = useCallback(async (userId: string) => {
         try {
             // First check if user is a team member of ANY company
-            const { data: teamData, error: teamError } = await supabase
+            const { data: teamData } = await supabase
                 .from('team_members')
                 .select('company_id')
                 .eq('user_id', userId)
                 .maybeSingle();
 
-            let targetCompanyId: string | null = null;
-            if (teamData) {
-                targetCompanyId = teamData.company_id;
-            }
+            let targetCompanyId: string | null = teamData?.company_id || null;
 
             // If not a team member, check if they are an owner
             if (!targetCompanyId) {
-                const { data: ownerData, error: ownerError } = await supabase
+                const { data: ownerData } = await supabase
                     .from('companies')
                     .select('id')
                     .eq('user_id', userId)
@@ -153,13 +159,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setCompany(companyRecord);
                 // Sync to cache
                 queryClient.setQueryData(companyKeys.detail(userId), companyRecord);
-                // Fetch associated role
-                fetchRole(userId, companyRecord.id);
+                // Fetch associated role and then permissions
+                await fetchRole(userId, companyRecord.id);
             }
         } catch (err: any) {
             console.error('fetchCompany error:', err.message || err);
         }
     }, [queryClient, fetchRole]);
+
+    const fetchProfile = useCallback(async (userId: string) => {
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (data) {
+                setProfile(data as any);
+            }
+        } catch (err) {
+            console.error('Error fetching profile:', err);
+        }
+    }, []);
 
     const refreshCompany = useCallback(async () => {
         if (user) {
@@ -267,6 +289,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return { error: null, confirmationRequired: true };
             }
 
+            // Explicitly backfill roles for the new company
+            // (The trigger handles the owner/team association, but let's ensure roles exist)
+            const { data: teamMember } = await supabase
+                .from('team_members')
+                .select('company_id')
+                .eq('user_id', authData.user.id)
+                .maybeSingle();
+
+            if (teamMember?.company_id) {
+                await (supabase.rpc as any)('backfill_company_roles', { target_company_id: teamMember.company_id });
+            }
+
             return { error: null, confirmationRequired: false };
         } catch (error) {
             return { error: error as Error };
@@ -305,15 +339,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
         setCompany(null);
         setProfile(null);
-        setRole(null);
+        setOriginalRole(null);
+        setImpersonatedRole(null);
     }, []);
 
-    const isAdmin = role === 'admin';
+    const impersonateRole = useCallback((role: TeamRole | null) => {
+        if (originalRole !== 'admin') {
+            console.warn('Only admins can impersonate roles');
+            return;
+        }
+        setImpersonatedRole(role);
+    }, [originalRole]);
 
-    const canDo = useCallback((permission: keyof typeof ROLE_PERMISSIONS['admin']): boolean => {
-        if (!role || !ROLE_PERMISSIONS[role]) return false;
-        return ROLE_PERMISSIONS[role][permission] || false;
-    }, [role]);
+    const activeRole = impersonatedRole || originalRole;
+
+    const isAdmin = activeRole === 'admin';
+
+    const canDo = useCallback((permission: PermissionKey): boolean => {
+        if (!activeRole) return false;
+        if (activeRole === 'admin') return true; // Hardcoded safety for admin role
+        if (!permissions) return false;
+        return permissions[permission] || false;
+    }, [activeRole, permissions]);
 
     const value = useMemo(() => ({
         user,
@@ -322,7 +369,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mention_tag: profile?.mention_tag || null,
         company,
         companyId: company?.id,
-        role,
+        role: activeRole,
+        originalRole,
+        impersonateRole,
         loading,
         isAdmin,
         canDo,
@@ -331,7 +380,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signOut,
         refreshCompany,
-    }), [user, session, profile, company, role, loading, isAdmin, canDo, signUp, signIn, signInWithGoogle, signOut, refreshCompany]);
+    }), [user, session, profile, company, activeRole, originalRole, impersonateRole, loading, isAdmin, canDo, signUp, signIn, signInWithGoogle, signOut, refreshCompany]);
 
     return (
         <AuthContext.Provider value={value}>

@@ -123,6 +123,15 @@ class InterviewService {
 
         if (error) throw error;
     }
+
+    async deleteInterview(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('interviews')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
 }
 
 export const interviewService = new InterviewService();

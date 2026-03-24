@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useAllInterviews, useUpdateInterviewStatus } from '@/hooks/useInterviews';
+import { useAllInterviews, useUpdateInterviewStatus, useDeleteInterview, useUpdateInterviewNotes } from '@/hooks/useInterviews';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ import { GlobalInterviewScheduler } from '@/components/interviews/GlobalIntervie
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScorecardForm } from '@/components/scorecards/ScorecardForm';
 import { Textarea } from '@/components/ui/textarea';
-import { useUpdateInterviewNotes } from '@/hooks/useInterviews';
 import {
     Calendar as CalendarIcon,
     List as ListIcon,
@@ -30,6 +29,8 @@ import {
     Plus,
     Star,
     Users,
+    MoreVertical,
+    AlertCircle,
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isFuture, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,12 @@ import {
     TooltipProvider,
     TooltipTrigger
 } from '@/components/ui/tooltip';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function Interviews() {
     const { user, company, loading: authLoading } = useAuth();
@@ -334,6 +341,7 @@ function InterviewCard({ interview, onStatusChange }: {
     const participants = interview.interview_candidates || [];
     const panel = interview.interview_panel || [];
     const updateNotes = useUpdateInterviewNotes();
+    const deleteInterview = useDeleteInterview();
     const [notes, setNotes] = useState(interview.notes || '');
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isScorecardOpen, setIsScorecardOpen] = useState(false);
@@ -479,6 +487,33 @@ function InterviewCard({ interview, onStatusChange }: {
                                     </Button>
                                 </div>
                             )}
+
+                            {/* Actions Dropdown (The Three Dots) */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg border-2 border-slate-100 hover:bg-slate-50 transition-colors">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-2xl border-none ring-1 ring-black/5">
+                                    <DropdownMenuItem
+                                        className="rounded-xl gap-3 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50 py-3 transition-colors"
+                                        onClick={() => {
+                                            if (window.confirm('🚨 PERMANENTLY delete this interview?')) {
+                                                deleteInterview.mutate(interview.id);
+                                            }
+                                        }}
+                                    >
+                                        <div className="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                                            <AlertCircle className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-sm">Delete Permanently</div>
+                                            <div className="text-[10px] opacity-70">Remove from system</div>
+                                        </div>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
 
                             {/* Feedback & Notes Actions */}
                             <Dialog open={isNotesOpen} onOpenChange={setIsNotesOpen}>

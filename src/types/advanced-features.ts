@@ -79,7 +79,8 @@ export interface Scorecard {
 }
 
 // Team Member Types
-export type TeamRole = 'admin' | 'recruiter' | 'coordinator';
+// Team Member Types
+export type TeamRole = string; // Support dynamic roles
 
 export interface TeamMember {
     id: string;
@@ -106,23 +107,29 @@ export interface VoiceNote {
     created_at: string;
 }
 
-// Permission helpers
-export const ROLE_PERMISSIONS: Record<TeamRole, {
+export interface CompanyPermissions {
     canPostJobs: boolean;
     canEditJobs: boolean;
     canDeleteJobs: boolean;
     canManageCandidates: boolean;
     canManageInterviews: boolean;
+    canRecordVoice: boolean;
     canManageTeam: boolean;
     canEditCompany: boolean;
     viewFullDashboard: boolean;
-}> = {
+}
+
+export type PermissionKey = keyof CompanyPermissions;
+
+// Permission defaults (Fallback)
+export const ROLE_PERMISSIONS: Record<string, CompanyPermissions> = {
     admin: {
         canPostJobs: true,
         canEditJobs: true,
         canDeleteJobs: true,
         canManageCandidates: true,
         canManageInterviews: true,
+        canRecordVoice: true,
         canManageTeam: true,
         canEditCompany: true,
         viewFullDashboard: true,
@@ -133,6 +140,7 @@ export const ROLE_PERMISSIONS: Record<TeamRole, {
         canDeleteJobs: true,
         canManageCandidates: true,
         canManageInterviews: true,
+        canRecordVoice: true,
         canManageTeam: false,
         canEditCompany: false,
         viewFullDashboard: true,
@@ -143,6 +151,7 @@ export const ROLE_PERMISSIONS: Record<TeamRole, {
         canDeleteJobs: false,
         canManageCandidates: false,
         canManageInterviews: true,
+        canRecordVoice: true,
         canManageTeam: false,
         canEditCompany: false,
         viewFullDashboard: false,
