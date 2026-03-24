@@ -22,7 +22,48 @@ function generatePassword(length = 12) {
     return retVal
 }
 
-console.log("Function 'create-teammate' - SMTP Debug Version (v1.1.4)");
+// Helper: Send email via SMTP
+async function sendSmtpEmail(to: string, subject: string, html: string): Promise<{ success: boolean; error?: string }> {
+    if (!SMTP_USER || !SMTP_PASS) {
+        console.warn("SMTP credentials missing (SMTP_USER/SMTP_PASS). Skipping email.");
+        return { success: false, error: "SMTP credentials not configured" };
+    }
+
+    console.log(`SMTP: Sending email to ${to}...`);
+    console.log(`SMTP: Using sender ${SMTP_USER}`);
+
+    try {
+        const { SMTPClient } = await import("https://deno.land/x/denomailer@1.6.0/mod.ts");
+        const client = new SMTPClient({
+            connection: {
+                hostname: "smtp.gmail.com",
+                port: 465,
+                tls: true,
+                auth: {
+                    username: SMTP_USER,
+                    password: SMTP_PASS,
+                },
+            },
+        });
+
+        await client.send({
+            from: SMTP_USER,
+            to: to,
+            subject: subject,
+            html: html,
+        });
+
+        await client.close();
+        console.log(`SMTP: Email sent successfully to ${to}`);
+        return { success: true };
+    } catch (err) {
+        console.error(`SMTP: Failed to send email to ${to}:`, err.message);
+        console.error(`SMTP: Full error:`, JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        return { success: false, error: err.message };
+    }
+}
+
+console.log("Function 'create-teammate' v2.0.0 - Enhanced SMTP");
 
 Deno.serve(async (req: Request) => {
     if (req.method === "OPTIONS") {
@@ -30,10 +71,6 @@ Deno.serve(async (req: Request) => {
     }
 
     let mailStatus = "Not attempted";
-    let debugInfo = {
-        secretsSet: !!(SMTP_USER && SMTP_PASS),
-        emailTo: null
-    };
 
     try {
         if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -74,8 +111,6 @@ Deno.serve(async (req: Request) => {
         }
 
         const cleanEmail = email.toLowerCase().trim();
-        debugInfo.emailTo = cleanEmail;
-
         const tempPassword = password || generatePassword();
         const displayName = full_name || cleanEmail.split('@')[0];
         let targetUserId = null;
@@ -87,9 +122,9 @@ Deno.serve(async (req: Request) => {
 
         if (existingUser) {
             targetUserId = existingUser.id;
-            console.log(`INVOKE: Found existing user ${targetUserId}`);
+            console.log(`Found existing user ${targetUserId}`);
         } else {
-            console.log(`INVOKE: Creating new user ${cleanEmail}...`);
+            console.log(`Creating new user ${cleanEmail}...`);
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: cleanEmail,
                 password: tempPassword,
@@ -119,72 +154,48 @@ Deno.serve(async (req: Request) => {
             invited_by: caller.id
         }, { onConflict: "user_id,company_id" });
 
-        // 3. SMTP Email Notification
-        if (SMTP_USER && SMTP_PASS) {
-            console.log(`INVOKE: Attempting SMTP Welcome Mail to ${cleanEmail}...`);
-            const htmlContent = `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-                    <h2 style="color: #0f172a; margin-bottom: 24px;">Welcome to the Team</h2>
-                    <p>Hi ${displayName},</p>
-                    <p>You have been added to the recruitment team at Straatix Partners.</p>
-                    
-                    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 24px 0;">
-                        <p style="margin: 0 0 10px 0;"><strong>Your Login Credentials:</strong></p>
-                        <p style="margin: 5px 0;"><strong>Email:</strong> ${cleanEmail}</p>
-                        <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 4px; border-radius: 4px;">${tempPassword}</code></p>
-                    </div>
-
-                    <p style="margin-top: 32px; color: #64748b; font-size: 14px;">
-                        Please login at <strong>http://localhost:8081</strong> and update your password.
-                    </p>
-                    
-                    <hr style="margin: 32px 0; border: 0; border-top: 1px solid #e2e8f0;" />
-                    <p style="text-align: center; color: #94a3b8; font-size: 12px;">Sent via Straatix Talent Sync</p>
+        // 3. Send Welcome Email via SMTP
+        const htmlContent = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <h2 style="color: #0f172a; margin-bottom: 24px;">Welcome to the Team</h2>
+                <p>Hi ${displayName},</p>
+                <p>You have been added to the recruitment team at Straatix Partners.</p>
+                
+                <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 24px 0;">
+                    <p style="margin: 0 0 10px 0;"><strong>Your Login Credentials:</strong></p>
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${cleanEmail}</p>
+                    <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 4px; border-radius: 4px;">${tempPassword}</code></p>
                 </div>
-            `;
 
-            try {
-                const { SMTPClient } = await import("https://deno.land/x/denomailer@1.6.0/mod.ts");
-                const client = new SMTPClient({
-                    connection: {
-                        hostname: "smtp.gmail.com",
-                        port: 465,
-                        tls: true,
-                        auth: {
-                            username: SMTP_USER,
-                            password: SMTP_PASS,
-                        },
-                    },
-                });
+                <p style="margin-top: 32px; color: #64748b; font-size: 14px;">
+                    Please login and update your password.
+                </p>
+                
+                <hr style="margin: 32px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+                <p style="text-align: center; color: #94a3b8; font-size: 12px;">Sent via Straatix Talent Sync</p>
+            </div>
+        `;
 
-                await client.send({
-                    from: SMTP_USER,
-                    to: cleanEmail,
-                    subject: "Welcome to Straatix Partners",
-                    html: htmlContent,
-                });
-
-                await client.close();
-                mailStatus = "Success";
-                console.log("INVOKE: SMTP Mail sent successfully.");
-            } catch (mailError) {
-                mailStatus = `Failed: ${mailError.message}`;
-                console.error("INVOKE: SMTP Failure -", mailError.message);
-            }
-        } else {
-            mailStatus = "Bypassed: SMTP Secrets (SMTP_USER/SMTP_PASS) not found in function environment.";
-        }
+        const emailResult = await sendSmtpEmail(
+            cleanEmail,
+            "Welcome to Straatix Partners",
+            htmlContent
+        );
+        mailStatus = emailResult.success ? "Success" : `Failed: ${emailResult.error}`;
 
         return new Response(JSON.stringify({
             success: true,
-            message: "Teammate created successfully and welcome email sent."
+            message: "Teammate created successfully.",
+            emailSent: emailResult.success,
+            emailError: emailResult.error || null,
+            mailStatus
         }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
     } catch (error) {
         console.error("CRITICAL ERROR:", error.message);
-        return new Response(JSON.stringify({ success: false, error: error.message }), {
+        return new Response(JSON.stringify({ success: false, error: error.message, mailStatus }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     }
